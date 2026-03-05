@@ -44,6 +44,7 @@ int bitCellHeight = 32;
 int rowSpace = 32;
 int textsize = 32;
 boolean isRunning = true;  // run/pause
+boolean isInDrawArea = false;
 String bitwiseString;
 PImage image1;
 void setup() {
@@ -78,36 +79,46 @@ void draw() {
   drawBitCells();
 }
 void mousePressed() {
-  if (x1 == 0) {
-    x1 = mouseX;
-    x2 = xOffset;
-  }
-  if (y1 == 0) {
-    y1 = mouseY;
-    y2 = yOffset;
-  }
-  int whichBit;
-  int c;
-  int r;
-  int bit;
-  int x = mouseX - (drawAreaX0 + drawAreaWidth + 100);
-  int y = mouseY - (drawAreaY0 + rowSpace / 2);
-  c = x / bitCellWidth;
-  if (c >= 8 || c < 0) {return;}
-  if (y % (bitCellHeight + rowSpace) >= bitCellHeight) {return;}
-  r = y / (bitCellHeight + rowSpace);
-  if (r >= 4 || r < 0) {return;}
-  whichBit = (3 - r) * 8 + (7 - c);
-  bit = bitmask & (1 << whichBit);
-  if (bit == 0) {bitmask |= (1 << whichBit);} else {
-    bitmask = bitmask & (~bit);
+  if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
+    isInDrawArea = true;
+    if (x1 == 0) {
+      x1 = mouseX;
+      x2 = xOffset;
+    }
+    if (y1 == 0) {
+      y1 = mouseY;
+      y2 = yOffset;
+    }
+  } else {
+    int whichBit;
+    int c;
+    int r;
+    int bit;
+    int x = mouseX - (drawAreaX0 + drawAreaWidth + 100);
+    int y = mouseY - (drawAreaY0 + rowSpace / 2);
+    c = x / bitCellWidth;
+    if (c >= 8 || c < 0) {return;}
+    if (y % (bitCellHeight + rowSpace) >= bitCellHeight) {return;}
+    r = y / (bitCellHeight + rowSpace);
+    if (r >= 4 || r < 0) {return;}
+    whichBit = (3 - r) * 8 + (7 - c);
+    bit = bitmask & (1 << whichBit);
+    if (bit == 0) {bitmask |= (1 << whichBit);} else {
+      bitmask = bitmask & (~bit);
+    }
   }
 }
 void mouseDragged() {
-  xOffset = x2 - (mouseX - x1);
-  yOffset = y2 - (mouseY - y1);
+  if (!isInDrawArea) {
+    return;
+  }
+  if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
+    xOffset = x2 - (mouseX - x1);
+    yOffset = y2 - (mouseY - y1);
+  }
 }
 void mouseReleased() {
+  isInDrawArea = false;
   x1 = 0;
   y1 = 0;
   // Sometimes the binary form (2's complement) is useful to display specific patterns
