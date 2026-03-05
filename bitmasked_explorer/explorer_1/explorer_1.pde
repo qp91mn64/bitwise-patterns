@@ -45,6 +45,14 @@ int bitCellWidth = 32;
 int bitCellHeight = 32;
 int rowSpace = 32;
 int textsize = 32;
+int bitCellWidth1 = 16;
+int bitCellHeight1 = 16;
+int x_x0 = drawAreaX0 - 25;
+int x_y0 = drawAreaY0 - 51;
+int y_x0 = drawAreaX0 - (51 - bitCellHeight1);
+int y_y0 = drawAreaY0 - 25;
+color colorOne = 255;
+color colorZero = 0;
 boolean isRunning = true;  // run/pause
 boolean isInDrawArea = false;
 String bitwiseString;
@@ -64,21 +72,20 @@ void setup() {
   image1 = createImage(drawAreaWidth, drawAreaHeight, ARGB);
   println(image1.width*image1.height,xMax,yMax);
   println(bitwiseString, "bitmask", bitmask, binary(bitmask));
-  noStroke();
-  noFill();
   frameRate(64);
-  rect(drawAreaX0, drawAreaY0, drawAreaWidth, drawAreaHeight);
-  drawBitwisePattern();
   drawBitCells();
+  drawBitwisePattern();
 }
 void draw() {
-  fill(0);
-  rect(drawAreaX0, drawAreaY0, drawAreaWidth, drawAreaHeight);
   if (isRunning) {
     bitmask--;  // As the change of `bitmask` a bit doesn't change the screen too much, you may use something like `bitmask-=2;` to make it change faster
   }
-  drawBitwisePattern();
+  stroke(191);
+  line(drawAreaX0, drawAreaY0 - 2, drawAreaX0, x_y0 + bitCellHeight1 + 4);
+  line(x_y0 + bitCellHeight1 + 4, drawAreaY0, drawAreaX0 - 2, drawAreaY0);
+  noStroke();
   drawBitCells();
+  drawBitwisePattern();
 }
 void mousePressed() {
   if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
@@ -93,20 +100,25 @@ void mousePressed() {
     }
   } else {
     int whichBit;
-    int c;
-    int r;
-    int bit;
-    int x = mouseX - (drawAreaX0 + drawAreaWidth + 100);
-    int y = mouseY - (drawAreaY0 + rowSpace / 2);
-    c = x / bitCellWidth;
-    if (c >= 8 || c < 0) {return;}
-    if (y % (bitCellHeight + rowSpace) >= bitCellHeight) {return;}
-    r = y / (bitCellHeight + rowSpace);
-    if (r >= 4 || r < 0) {return;}
-    whichBit = (3 - r) * 8 + (7 - c);
-    bit = bitmask & (1 << whichBit);
-    if (bit == 0) {bitmask |= (1 << whichBit);} else {
-      bitmask = bitmask & (~bit);
+    int clickX1 = mouseX - (drawAreaX0 + drawAreaWidth + 100);
+    int clickY1 = mouseY - (drawAreaY0 + rowSpace / 2);
+    int r1 = clickY1 / (bitCellHeight + rowSpace);
+    int c1 = clickX1 / bitCellWidth;
+    if (clickX1 >= 0 && clickY1 >= 0 && c1 >= 0 && c1 < 8 && clickY1 % (bitCellHeight + rowSpace) < bitCellHeight && r1 >= 0 && r1 < 4) {
+      whichBit = (3 - r1) * 8 + (7 - c1);
+      bitmask = bitmask ^ (1 << whichBit);
+    }
+    int clickX2 = mouseX - x_x0;
+    int clickY2 = mouseY - x_y0;
+    whichBit = 31 -  clickX2 / bitCellWidth1;
+    if (clickX2 >= 0 && clickY2 >= 0 && clickY2 < bitCellHeight1 && whichBit >= 0 && whichBit < 32) {
+      xOffset = xOffset ^ (1 << whichBit); 
+    }
+    int clickX3 = mouseX - (y_x0 - bitCellHeight1);
+    int clickY3 = mouseY - y_y0;println(clickX3,clickY3);
+    whichBit = 31 - clickY3 / bitCellWidth1;
+    if (clickX3 >= 0 && clickX3 < bitCellHeight1 && clickY3 >= 0 && whichBit >= 0 && whichBit < 32) {
+      yOffset = yOffset ^ (1 << whichBit);
     }
   }
 }
@@ -241,6 +253,42 @@ void drawBitCells() {
     String c1 = "0";
     if (c == 1) {c1 = "1";}
     text(c1, x * bitCellWidth, y * (bitCellHeight + rowSpace) + rowSpace / 2, bitCellWidth, bitCellHeight);
+  }
+  popMatrix();
+  textSize(16);
+  textAlign(CENTER, CENTER);
+  String s1 = binary(xOffset);
+  for (int i = 0; i < 32; i++) {
+    int bit = xOffset & (1 << (31 - i));
+    if (bit == 0) {
+      fill(colorZero);
+      rect(x_x0 + i * bitCellWidth1, x_y0, bitCellWidth1, bitCellHeight1);
+      fill(255);
+      text(s1.substring(i, i+1), x_x0 + i * bitCellWidth1, x_y0, bitCellWidth1, bitCellHeight1);
+    } else {
+      fill(colorOne);
+      rect(x_x0 + i * bitCellWidth1, x_y0, bitCellWidth1, bitCellHeight1);
+      fill(0);
+      text(s1.substring(i, i+1), x_x0 + i * bitCellWidth1, x_y0, bitCellWidth1, bitCellHeight1);
+    }
+  }
+  s1 = binary(yOffset);
+  pushMatrix();
+  translate(y_x0, y_y0);
+  rotate(PI/2);
+  for (int i = 0; i < 32; i++) {
+    int bit = yOffset & (1 << (31 - i));
+    if (bit == 0) {
+      fill(colorZero);
+      rect(i * bitCellWidth1, 0, bitCellWidth1, bitCellHeight1);
+      fill(255);
+      text(s1.substring(i, i+1), i * bitCellWidth1, 0, bitCellWidth1, bitCellHeight1);
+    } else {
+      fill(colorOne);
+      rect(i * bitCellWidth1, 0, bitCellWidth1, bitCellHeight1);
+      fill(0);
+      text(s1.substring(i, i+1), i * bitCellWidth1, 0, bitCellWidth1, bitCellHeight1);
+    }
   }
   popMatrix();
 }
