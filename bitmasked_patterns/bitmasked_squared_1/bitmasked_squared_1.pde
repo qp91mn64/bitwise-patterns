@@ -69,7 +69,6 @@ void draw() {
   image1.loadPixels();
   for (int x = 0; x < xMax; x++) {
     for (int y = 0; y < yMax; y++) {
-      // Calculate values near 4096
       x1 = x + xOffset;
       y1 = y + yOffset;
       if (whichBitwiseOperator == 1) {
