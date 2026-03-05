@@ -4,6 +4,8 @@
  * Created: 2026-03-05
  * 
  * Modefied from bitmasked_pattern_1
+ * Containing code from my sketch BitwiseColorExplorer:
+ * https://github.com/qp91mn64/bitwise-color-explorer/tree/main/BitwiseColorExplorer
  * 
  * Result is one of the followings:
  *   (x & y) & bitmask

@@ -4,6 +4,8 @@
  * Created: 2026-02-26
  * 
  * Modefied from c_bitwise_9 for its structure
+ * c_bitwise_9 can be seen in my GitHub reopsitory sketches_checkerboard:
+ * https://github.com/qp91mn64/sketches_checkerboard/tree/main/bitwise/c_bitwise_9
  * 
  * Result is one of the followings:
  *   (x & y) * (x & y)
