@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!-- Bitwise Pattern Explorer Using p5.js
+     
+     Author: qp91mn64
+     License: MIT License
+     Created: 2026-03-11 
+     
+     Work in progress -->
+<head>
+    <meta charset="UTF-8">
+    <title>Bitwise Pattern Explorer Using p5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+</head>
+<body>
+    <script>
+        let bitmask = 0;
+        let xOffset = 0;
+        let yOffset = 0;
+        let drawAreaX0 = 100;
+        let drawAreaY0 = 100;
+        let drawAreaWidth = 512;
+        let drawAreaHeight = 512;
+        let bitCellWidth = 32;
+        let bitCellHeight = 32;
+        let rowSpace = 32;
+        // XXX: If the text box is as large as the size of text then no text is drawn
+        // According to what AI says and my tests
+        // Smaller textsize can avoid the problem of no text on computer
+        // Or use text() with 3 parameters instead
+        // It seems that the size of text works differently between Processing and p5.js
+        // Even differ from platforms (computer/smartphone)
+        let textsize1 = 28;
+        let bitCellWidth1 = 16;
+        let bitCellHeight1 = 16;
+        let textSize2 = 14;
+        let x_x0 = drawAreaX0 - 25;
+        let x_y0 = drawAreaY0 - 51;
+        let y_x0 = drawAreaX0 - (51 - bitCellHeight1);
+        let y_y0 = drawAreaY0 - 25;
+        let colorOne = 255;
+        let colorZero = 0;
+        let isRunning = true;  // run/pause
+        let isInDrawArea = false;
+        let img1;
+        function setup() {
+            createCanvas(1000, 750);
+            background(0);
+            img1 = createImage(drawAreaWidth, drawAreaHeight);
+            frameRate(64);
+        }
+        function draw() {
+            let x, y, whichPixel, result;
+            if (isRunning) {
+                bitmask--;
+            }
+            stroke(191);
+            line(drawAreaX0, drawAreaY0 - 2, drawAreaX0, x_y0 + bitCellHeight1 + 4);
+            line(x_y0 + bitCellHeight1 + 4, drawAreaY0, drawAreaX0 - 2, drawAreaY0);
+            noStroke();
+            drawBitCells();
+            drawBitwisePattern();
+        }
+        function mousePressed() {
+            if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
+                isInDrawArea = true;
+            } else {
+                let whichBit;
+                let clickX1 = mouseX - (drawAreaX0 + drawAreaWidth + 100);
+                let clickY1 = mouseY - (drawAreaY0 + rowSpace / 2);
+                let r1 = parseInt(clickY1 / (bitCellHeight + rowSpace));
+                let c1 = parseInt(clickX1 / bitCellWidth);
+                if (clickX1 >= 0 && clickY1 >= 0 && clickY1 % (bitCellHeight + rowSpace) < bitCellHeight && c1 >= 0 && c1 < 8 && r1 >= 0 && r1 < 4) {
+                    whichBit = (3 - r1) * 8 + 7 - c1;
+                    bitmask = bitmask ^ (1 << whichBit);
+                }
+                let clickX2 = mouseX - x_x0;
+                let clickY2 = mouseY - x_y0;
+                whichBit =  31 - parseInt(clickX2 / bitCellWidth1);
+                if (clickX2 >= 0 && clickY2 >= 0 && clickY2 < bitCellHeight1 && whichBit >= 0 && whichBit < 32) {
+                    xOffset = xOffset ^ (1 << whichBit);
+                }
+                let clickX3 =  mouseX - (y_x0 - bitCellHeight1);
+                let clickY3 = mouseY - y_y0;
+                whichBit = 31 - parseInt(clickY3 / bitCellWidth1);
+                if (clickX3 >= 0 && clickX3 < bitCellHeight1 && clickY3 >= 0 && whichBit >= 0 && whichBit < 32) {
+                    yOffset = yOffset ^ (1 << whichBit);
+                }
+            }
+        }
+        // XXX: If you write your p5.js code on your smartphone embedded in a html file
+        // The program may response twice sometimes when you touch
+        // According to what AI says, use touchStarted() and let it return false to solve the problem
+        // But if false is returned then the canvas get stuck on smartphone.
+        function touchStarted() {
+            return;
+        }
+        function drawBitwisePattern() {
+            img1.loadPixels();
+            let r1;
+            for (let i = 0; i < img1.pixels.length; i += 4) {
+                whichPixel = i / 4;
+                x = parseInt(whichPixel % img1.width);
+                y = parseInt(whichPixel / img1.width);
+                r1 = (x + xOffset) ^ (y + yOffset);
+                result = r1 * r1 & bitmask;
+                if (result >> 8 == 0) {  // grayscale, just like color() in Processing
+                    img1.pixels[i] = result & 255;  // red
+                    img1.pixels[i+1] = result & 255;  // green
+                    img1.pixels[i+2] = result & 255;  // blue
+                    img1.pixels[i+3] = 255;  // alpha
+                } else {
+                    img1.pixels[i] = (result >> 16) & 255;  // red
+                    img1.pixels[i+1] = (result >> 8) & 255;  // green
+                    img1.pixels[i+2] = result & 255;  // blue
+                    img1.pixels[i+3] = 255;  // alpha
+                }
+            }
+            img1.updatePixels();
+            image(img1, drawAreaX0, drawAreaY0);
+        }
+        function drawBitCells() {
+            push();
+            translate(drawAreaX0 + drawAreaWidth + 100, drawAreaY0);
+            for (let i = 0; i < 32; i++) {
+                let x = 7 - i % 8;
+                let y = 3 - parseInt(i / 8);
+                let fillColor = 1 << i;
+                //let c = (bitmask & (1 << i)) >> i;
+                let c = (bitmask >> i) & 1;
+                // In p5.js color behaves differently from Processing; integers cannot directly used as RGBA color.
+                if (fillColor >> 24 == 0) {
+                    fill((fillColor  >> 16) & 255, (fillColor >> 8) & 255, fillColor & 255);  // bitwise RGB color
+                } else {
+                    fill(0, 0, 0, (fillColor >> 24) & 255);
+                }
+                rect(x * bitCellWidth, y * (bitCellHeight + rowSpace) + rowSpace / 2, bitCellWidth, bitCellHeight);
+                textSize(textsize1);
+                textAlign(LEFT, TOP);
+                fill(255);
+                let c1 = "0";
+                if (c == 1) {
+                    c1 = "1";
+                }
+                text(c1, x * bitCellWidth + 8, y * (bitCellHeight + rowSpace) + rowSpace / 2 + 3);
+            }
+            pop();
+            textSize(textSize2);
+            textAlign(LEFT, TOP);
+            // XXX: No binary() in p5.js
+            for (let i = 0; i < 32; i++) {
+               let bit = (xOffset >> (31 - i)) & 1;
+               if (bit == 0) {
+                   fill(colorZero);
+                   rect(x_x0 + i * bitCellWidth1,  x_y0, bitCellWidth1, bitCellHeight1);
+                   fill(255);
+                   text(`${bit}`,  x_x0 + i * bitCellWidth1 + 4,  x_y0 + 2);
+               } else {
+                   fill(colorOne);
+                   rect(x_x0 + i * bitCellWidth1,  x_y0, bitCellWidth1, bitCellHeight1);
+                   fill(0);
+                   text(`${bit}`,  x_x0 + i * bitCellWidth1 + 4,  x_y0 + 2);
+               }
+            }
+            push();
+            translate(y_x0, y_y0);
+            rotate(PI / 2);
+            textSize(textSize2);
+            textAlign(LEFT, TOP);
+            for (let i = 0; i < 32; i++) {
+                let bit = (yOffset >> (31 - i)) & 1;
+                if (bit == 0) {
+                    fill(colorZero);
+                    rect(i * bitCellWidth1, 0, bitCellWidth1, bitCellHeight1);
+                    fill(255);
+                    text(`${bit}`, i * bitCellWidth1 + 4, 2);
+                } else {
+                    fill(colorOne);
+                    rect(i * bitCellWidth1, 0, bitCellWidth1, bitCellHeight1);
+                    fill(0);
+                    text(`${bit}`, i * bitCellWidth1 + 4, 2);
+                }
+            }
+            pop();
+        }
+    </script>
+</body>
