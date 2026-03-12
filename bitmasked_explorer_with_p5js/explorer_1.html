@@ -65,16 +65,21 @@
             if (keyIsPressed) {
                 // Delay 400ms in case you just want to move one pixel
                 if (a1 >= 0 && millis() - a1 > 400) {
-                    if (keyCode == RIGHT_ARROW) {
+                    if (keyIsDown(RIGHT_ARROW)) {
                         xOffset++;
-                    } else if (keyCode == LEFT_ARROW) {
+                    }
+                    if (keyIsDown(LEFT_ARROW)) {
                         xOffset--;
-                    } else if (keyCode == UP_ARROW) {
+                    }
+                    if (keyIsDown(UP_ARROW)) {
                         yOffset--;
-                    } else if (keyCode == DOWN_ARROW) {
+                    }
+                    if (keyIsDown(DOWN_ARROW)) {
                         yOffset++;
                     }
                 }
+            } else {
+                a1 = -1;
             }
             stroke(191);
             line(drawAreaX0, drawAreaY0 - 2, drawAreaX0, x_y0 + bitCellHeight1 + 4);
@@ -86,22 +91,22 @@
         function keyPressed() {
             if (a1 == -1) {
                 a1 = millis();
-                if (keyCode == RIGHT_ARROW) {
+                if (keyIsDown(RIGHT_ARROW)) {
                     xOffset++;
-                } else if (keyCode == LEFT_ARROW) {
+                }
+                if (keyIsDown(LEFT_ARROW)) {
                     xOffset--;
-                } else if (keyCode == UP_ARROW) {
+                }
+                if (keyIsDown(UP_ARROW)) {
                     yOffset--;
-                } else if (keyCode == DOWN_ARROW) {
+                }
+                if (keyIsDown(DOWN_ARROW)) {
                     yOffset++;
                 }
             }
             if (key == " ") {
                 isRunning = !isRunning;
             }
-        }
-        function keyReleased() {
-            a1 = -1;
         }
         function mousePressed() {
             if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
