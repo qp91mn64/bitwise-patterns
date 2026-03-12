@@ -160,9 +160,14 @@
             img1.loadPixels();
             let r1;
             for (let i = 0; i < img1.pixels.length; i += 4) {
-                whichPixel = i / 4;
-                x = parseInt(whichPixel % img1.width);
-                y = parseInt(whichPixel / img1.width);
+                // Bitwise operation is both a drawing method and an optimization tool
+                // Inspired from AI
+                // While AI suggested Math.floor() and mentioned bitwise operation (| 0)
+                // I come up with an idea to replace the division with bitwise operation
+                // As 512 equals 1 << 9
+                whichPixel = i >> 2;  // whichPixel = i / 4
+                x = whichPixel & 511;  // whichPixel % 512
+                y = whichPixel >>> 9;  // whichPixel / 512
                 r1 = (x + xOffset) ^ (y + yOffset);
                 result = r1 * r1 & bitmask;
                 if (result >> 8 == 0) {  // grayscale, just like color() in Processing
@@ -187,7 +192,6 @@
                 let x = 7 - i % 8;
                 let y = 3 - parseInt(i / 8);
                 let fillColor = 1 << i;
-                //let c = (bitmask & (1 << i)) >> i;
                 let c = (bitmask >> i) & 1;
                 // In p5.js color behaves differently from Processing; integers cannot directly used as RGBA color.
                 if (fillColor >> 24 == 0) {
