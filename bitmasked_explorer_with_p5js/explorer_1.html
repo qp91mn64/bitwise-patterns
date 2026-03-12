@@ -23,7 +23,8 @@
         let bitCellWidth = 32;
         let bitCellHeight = 32;
         let rowSpace = 32;
-        // XXX: If the text box is as large as the size of text then no text is drawn
+        // XXX: If the text box is as large as the size of text then no text is drawn on computer
+        // But text does appear on smartphone
         // According to what AI says and my tests
         // Smaller textsize can avoid the problem of no text on computer
         // Or use text() with 3 parameters instead
@@ -37,21 +38,43 @@
         let x_y0 = drawAreaY0 - 51;
         let y_x0 = drawAreaX0 - (51 - bitCellHeight1);
         let y_y0 = drawAreaY0 - 25;
+        let x1 = 0;
+        let y1 = 0;
+        let x2 = 0;
+        let y2 = 0;
         let colorOne = 255;
         let colorZero = 0;
         let isRunning = true;  // run/pause
         let isInDrawArea = false;
         let img1;
+        let a1;
         function setup() {
-            createCanvas(1000, 750);
+            createCanvas(1000, 700);
             background(0);
             img1 = createImage(drawAreaWidth, drawAreaHeight);
             frameRate(64);
+            a1 = -1;
         }
         function draw() {
             let x, y, whichPixel, result;
             if (isRunning) {
                 bitmask--;
+            }
+            // Use keyIsPressed instead of keyPressed()
+            // To make sure the drawings keep moving until you release the arrow key
+            if (keyIsPressed) {
+                // Delay 400ms in case you just want to move one pixel
+                if (a1 >= 0 && millis() - a1 > 400) {
+                    if (keyCode == RIGHT_ARROW) {
+                        xOffset++;
+                    } else if (keyCode == LEFT_ARROW) {
+                        xOffset--;
+                    } else if (keyCode == UP_ARROW) {
+                        yOffset--;
+                    } else if (keyCode == DOWN_ARROW) {
+                        yOffset++;
+                    }
+                }
             }
             stroke(191);
             line(drawAreaX0, drawAreaY0 - 2, drawAreaX0, x_y0 + bitCellHeight1 + 4);
@@ -60,9 +83,34 @@
             drawBitCells();
             drawBitwisePattern();
         }
+        function keyPressed() {
+            if (a1 == -1) {
+                a1 = millis();
+                if (keyCode == RIGHT_ARROW) {
+                    xOffset++;
+                } else if (keyCode == LEFT_ARROW) {
+                    xOffset--;
+                } else if (keyCode == UP_ARROW) {
+                    yOffset--;
+                } else if (keyCode == DOWN_ARROW) {
+                    yOffset++;
+                }
+            }
+        }
+        function keyReleased() {
+            a1 = -1;
+        }
         function mousePressed() {
             if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
                 isInDrawArea = true;
+                if (x1 == 0) {
+                    x1 = mouseX;
+                    x2 = xOffset;
+                }
+                if (y1 == 0) {
+                    y1 = mouseY;
+                    y2 = yOffset;
+                }
             } else {
                 let whichBit;
                 let clickX1 = mouseX - (drawAreaX0 + drawAreaWidth + 100);
@@ -87,8 +135,22 @@
                 }
             }
         }
+        function mouseDragged() {
+            if (!isInDrawArea) {
+                return;
+            }
+            if (mouseX >= drawAreaX0 && mouseX < drawAreaX0 + drawAreaWidth && mouseY >= drawAreaY0 && mouseY < drawAreaY0 + drawAreaHeight) {
+                xOffset = x2 - (mouseX - x1);
+                yOffset = y2 - (mouseY - y1);
+            }
+        }
+        function mouseReleased() {
+            isInDrawArea = false;
+            x1 = 0;
+            y1 = 0;
+        }
         // XXX: If you write your p5.js code on your smartphone embedded in a html file
-        // The program may response twice sometimes when you touch
+        // The program may response twice when you touch
         // According to what AI says, use touchStarted() and let it return false to solve the problem
         // But if false is returned then the canvas get stuck on smartphone.
         function touchStarted() {
