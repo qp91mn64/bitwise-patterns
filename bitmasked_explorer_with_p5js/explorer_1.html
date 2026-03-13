@@ -46,6 +46,10 @@
         let colorZero = 0;
         let isRunning = true;  // run/pause
         let isInDrawArea = false;
+        let formula_id = 5;
+        let formulas = ["(x&y)&bitmask","(x|y)&bitmask","(x^y)&bitmask","(x&y)*(x&y)&bitmask","(x|y)*(x|y)&bitmask","(x^y)*(x^y)&bitmask",
+                        "((x*x)&(y*y))&bitmask","((x*x)|(y*y))&bitmask","((x*x)^(y*y))&bitmask"
+        ];
         let img1;
         let a1;
         function setup() {
@@ -87,6 +91,14 @@
             noStroke();
             drawBitCells();
             drawBitwisePattern();
+            stroke(200);
+            fill(0);
+            rect(drawAreaX0 + drawAreaWidth + 100, drawAreaY0 + 4 * (bitCellHeight + rowSpace) + rowSpace / 2 + 30, 256, 32);
+            noStroke();
+            fill(255);
+            textSize(20);
+            textAlign(LEFT, BOTTOM);
+            text(formulas[formula_id], drawAreaX0 + drawAreaWidth + 100, drawAreaY0 + 4 * (bitCellHeight + rowSpace) + rowSpace / 2 + 60);
         }
         function keyPressed() {
             if (a1 == -1) {
@@ -141,6 +153,12 @@
                 if (clickX3 >= 0 && clickX3 < bitCellHeight1 && clickY3 >= 0 && whichBit >= 0 && whichBit < 32) {
                     yOffset = yOffset ^ (1 << whichBit);
                 }
+                let clickX4 = mouseX - (drawAreaX0 + drawAreaWidth + 100);
+                let clickY4 = mouseY - (drawAreaY0 + 4 * (bitCellHeight + rowSpace) + rowSpace / 2 + 30);
+                if (clickX4 >= 0 && clickX4 < 256 && clickY4 >= 0 && clickY4 < 32) {
+                    formula_id++;
+                    if (formula_id >= formulas.length) {formula_id -= formulas.length;}
+                }
             }
         }
         function mouseDragged() {
@@ -176,8 +194,26 @@
                 whichPixel = i >> 2;  // whichPixel = i / 4
                 x = whichPixel & 511;  // whichPixel % 512
                 y = whichPixel >>> 9;  // whichPixel / 512
-                r1 = (x + xOffset) ^ (y + yOffset);
-                result = r1 * r1 & bitmask;
+                // Note: don't use eval() here as it is too slow
+                if (formula_id == 0) {
+                    result = (x + xOffset) & (y + yOffset) & bitmask;
+                } else if (formula_id == 1) {
+                    result = ((x + xOffset) | (y + yOffset)) & bitmask;
+                } else if (formula_id == 2) {
+                    result = ((x + xOffset) ^ (y + yOffset)) & bitmask;
+                } else if (formula_id == 3) {
+                    result = ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset)) & bitmask;
+                } else if (formula_id == 4) {
+                    result = ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset)) & bitmask;
+                } else if (formula_id == 5) {
+                    result = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset)) & bitmask;
+                } else if (formula_id == 6) {
+                    result = ((x + xOffset) * (x + xOffset) & (y + yOffset) * (y + yOffset)) & bitmask;
+                } else if (formula_id == 7) {
+                    result = ((x + xOffset) * (x + xOffset) | (y + yOffset) * (y + yOffset)) & bitmask;
+                } else if (formula_id == 8) {
+                    result = ((x + xOffset) * (x + xOffset) ^ (y + yOffset) * (y + yOffset)) & bitmask;
+                }
                 if (result >> 8 == 0) {  // grayscale, just like color() in Processing
                     img1.pixels[i] = result & 255;  // red
                     img1.pixels[i+1] = result & 255;  // green
