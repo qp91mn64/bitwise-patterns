@@ -18,9 +18,11 @@
         let yOffset = 0;
         let isRunning = true;  // run/pause
         let formula_id = 5;
-        let formulas = ["(x&y)&bitmask","(x|y)&bitmask","(x^y)&bitmask","(x&y)*(x&y)&bitmask","(x|y)*(x|y)&bitmask","(x^y)*(x^y)&bitmask",
-                        "((x*x)&(y*y))&bitmask","((x*x)|(y*y))&bitmask","((x*x)^(y*y))&bitmask"
+        let formulas = ["x&y", "x|y", "x^y", "(x&y)*(x&y)", "(x|y)*(x|y)", "(x^y)*(x^y)",
+                        "(x*x)&(y*y)", "(x*x)|(x*y)", "(x*x)^(y*y)"
         ];
+        let formula2_id = 0;
+        let formulas2 = ["&", "|", "^"];
         let img1;
         let drawArea;
         let bitCell1;
@@ -31,7 +33,7 @@
             createCanvas(1000, 700);
             background(0);
             img1 = createImage(512, 512);
-            frameRate(256);
+            frameRate(64);
             drawArea = {
                 x0: 100,
                 y0: 100,
@@ -44,7 +46,7 @@
                 x2: 0,
                 y2: 0,
                 display: function() {
-                    let x, y, whichPixel, result;
+                    let x, y, whichPixel, result, r1;
                     img1.loadPixels();
                     for (let i = 0; i < img1.pixels.length; i += 4) {
                         // Bitwise operation is both a drawing method and an optimization tool
@@ -57,23 +59,30 @@
                         y = whichPixel >>> 9;  // whichPixel / 512
                         // Note: don't use eval() here as it is too slow
                         if (formula_id == 0) {
-                            result = (x + xOffset) & (y + yOffset) & bitmask;
+                            r1 = (x + xOffset) & (y + yOffset);
                         } else if (formula_id == 1) {
-                            result = ((x + xOffset) | (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) | (y + yOffset));
                         } else if (formula_id == 2) {
-                            result = ((x + xOffset) ^ (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) ^ (y + yOffset));
                         } else if (formula_id == 3) {
-                            result = ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset));
                         } else if (formula_id == 4) {
-                            result = ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset));
                         } else if (formula_id == 5) {
-                            result = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset));
                         } else if (formula_id == 6) {
-                            result = ((x + xOffset) * (x + xOffset) & (y + yOffset) * (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) * (x + xOffset) & (y + yOffset) * (y + yOffset));
                         } else if (formula_id == 7) {
-                            result = ((x + xOffset) * (x + xOffset) | (y + yOffset) * (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) * (x + xOffset) | (y + yOffset) * (y + yOffset));
                         } else if (formula_id == 8) {
-                            result = ((x + xOffset) * (x + xOffset) ^ (y + yOffset) * (y + yOffset)) & bitmask;
+                            r1 = ((x + xOffset) * (x + xOffset) ^ (y + yOffset) * (y + yOffset));
+                        }
+                        if (formula2_id == 0) {
+                            result = r1 & bitmask;
+                        } else if (formula2_id == 1) {
+                            result = r1 | bitmask;
+                        } else if (formula2_id == 2) {
+                            result = r1 ^ bitmask;
                         }
                         if (result >> 8 == 0) {  // grayscale, just like color() in Processing
                             img1.pixels[i] = result & 255;  // red
@@ -276,25 +285,34 @@
             formulaArea = {
                 x0: drawArea.x0 + drawArea.w + 100,
                 y0: drawArea.y0 + 4 * (bitCell1.bitCellHeight + bitCell1.rowSpace) + bitCell1.rowSpace / 2 + 30,
-                areaWidth: 256,
+                areaWidth: 128,
                 areaHeight: 32,
                 areaTextSize: 20,
+                w2: 32,
+                w3: 96,
                 display: function() {
                     stroke(200);
                     fill(0);
                     rect(this.x0, this.y0, this.areaWidth, this.areaHeight);
+                    rect(this.x0 + this.areaWidth, this.y0, this.w2, this.areaHeight);
                     noStroke();
+                    rect(this.x0 + this.areaWidth + this.w2, this.y0, this.w3, this.areaHeight);
                     fill(255);
                     textSize(this.areaTextSize);
                     textAlign(LEFT, BOTTOM);
-                    text(formulas[formula_id], this.x0, this.y0 + 30);
+                    text(formulas[formula_id], this.x0 + 4, this.y0 + 28);
+                    text(formulas2[formula2_id], this.x0 + this.areaWidth + (this.w2 - textWidth(formulas2[formula2_id])) / 2, this.y0 + 28);
+                    text("bitmask", this.x0 + this.areaWidth + this.w2 + (this.w2 - this.areaTextSize) / 2, this.y0 + 28);
                 },
                 handleMousePressed: function(mouseX1, mouseY1) {
                     let clickX = mouseX1 - this.x0;
                     let clickY = mouseY1 - this.y0;
-                    if (clickX >= 0 && clickX < 256 && clickY >= 0 && clickY < 32) {
+                    if (clickX >= 0 && clickX < this.areaWidth && clickY >= 0 && clickY < this.areaHeight) {
                         formula_id++;
                         if (formula_id >= formulas.length) {formula_id -= formulas.length;}
+                    } else if (clickX >= this.areaWidth && clickX < this.areaWidth + this.w2 && clickY >= 0 && clickY < this.areaHeight) {
+                        formula2_id++;
+                        if (formula2_id >= formulas2.length) {formula2_id -= formulas2.length;}
                     }
                 }
             }
