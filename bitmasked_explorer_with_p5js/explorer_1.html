@@ -19,7 +19,7 @@
         let isRunning = true;  // run/pause
         let formula_id = 5;
         let formulas = ["x&y", "x|y", "x^y", "(x&y)*(x&y)", "(x|y)*(x|y)", "(x^y)*(x^y)",
-                        "(x*x)&(y*y)", "(x*x)|(y*y)", "(x*x)^(y*y)"
+                        "(x&y)*(x&y)*(x&y)", "(x|y)*(x|y)*(x|y)", "(x^y)*(x^y)*(x^y)", "(x*x)&(y*y)", "(x*x)|(y*y)", "(x*x)^(y*y)"
         ];
         let formula2_id = 0;
         let formulas2 = ["&", "|", "^"];
@@ -71,10 +71,16 @@
                         } else if (formula_id == 5) {
                             r1 = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset));
                         } else if (formula_id == 6) {
-                            r1 = ((x + xOffset) * (x + xOffset) & (y + yOffset) * (y + yOffset));
+                            r1 = ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset));
                         } else if (formula_id == 7) {
-                            r1 = ((x + xOffset) * (x + xOffset) | (y + yOffset) * (y + yOffset));
+                            r1 = ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset));
                         } else if (formula_id == 8) {
+                            r1 = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset));
+                        } else if (formula_id == 9) {
+                            r1 = ((x + xOffset) * (x + xOffset) & (y + yOffset) * (y + yOffset));
+                        } else if (formula_id == 10) {
+                            r1 = ((x + xOffset) * (x + xOffset) | (y + yOffset) * (y + yOffset));
+                        } else if (formula_id == 11) {
                             r1 = ((x + xOffset) * (x + xOffset) ^ (y + yOffset) * (y + yOffset));
                         }
                         if (formula2_id == 0) {
