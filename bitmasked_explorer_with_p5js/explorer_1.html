@@ -9,6 +9,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Bitwise Pattern Explorer Using p5.js</title>
+    <!-- If you use p5.js 2.x, use the link as https://cdn.jsdelivr.net/npm/p5@2.0.0/lib/p5.min.js, with p5.js 1.x also available. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 </head>
 <body>
@@ -29,8 +30,38 @@
         let bitCell2;
         let bitCell3;
         let formulaArea;
+        let dpr;  // devicePixelRatio
         function setup() {
-            createCanvas(1000, 700);
+            /*
+            This hack is from AI (MiniMax-M2.7)
+            for how to draw sharp details by pixels
+            and draw UI components the same size as sketches written in Processing 4
+            instead of changing DPI to 100% before running
+            for p5.js 2.x, the method of calculating mouseX and mouseY is different, multiplication by dpr is needed
+            
+            AI says that:
+            `createCanvas()` parameters in p5.js are interpreted as CSS pixel dimensions, NOT physical pixels.
+            The physical pixel count = CSS pixels × DPR.
+            To get 1:1 mapping, you must manually account for DPR.
+            
+            Note: A minor bug is introduced that, when dragging the mouse pixel by pixel (a little challenging actually),
+            some values of xOffset and yOffset are skipped if DPR > 1 (only tested 1.25)
+            The way to make up for this is using the UI or arrow keys instead,
+            as there are always errors with dragging the mouse.
+            I tried to fix this with AI,
+            but after quite an effort, I discovered that the bug is too complicated to be fixed (so gave up, ignored temporarily).
+            
+            A previous version of my bitwise-pattern-explorer is used for testing, and only tested on Windows 11
+            */
+            dpr = window.devicePixelRatio || 1;  // for HiDPI displays
+            let cvs = createCanvas(Math.round(1000 * dpr), Math.round(700 * dpr));
+            cvs.style("width", "1000px");
+            cvs.style("height", "700px");
+            // nearest-neighbor interpolation, so no blurry details when zooming in
+            // the side effect is pixels rendered with different size when non-integer zooming in
+            cvs.style("image-rendering", "pixelated");
+            noSmooth();  // use this alone can make the graphics less blurry, but not sharp enough
+            //drawingContext.imageSmoothEnabled = false;
             background(0);
             img1 = createImage(512, 512);
             frameRate(64);
@@ -341,17 +372,41 @@
             drawArea.onKeyPressed(key);
         }
         function mousePressed() {
-            drawArea.onMousePressed(mouseX, mouseY);
-            bitCell1.handleMousePressed(mouseX, mouseY);
-            bitCell2.handleMousePressed(mouseX, mouseY);
-            bitCell3.handleMousePressed(mouseX, mouseY);
-            formulaArea.handleMousePressed(mouseX, mouseY);
+            // Keep the integer
+            // so that pattern drawn with formula containing x*x, y*y, etc.
+            // doesn't change when just dragging the mouse
+            let mouseX1 = Math.floor(mouseX);
+            let mouseY1 = Math.floor(mouseY);
+            // use this if you use p5.js 2.x
+            // let mouseX1 = Math.floor(mouseX * dpr);
+            // let mouseY1 = Math.floor(mouseY * dpr);
+            drawArea.onMousePressed(mouseX1, mouseY1);
+            bitCell1.handleMousePressed(mouseX1, mouseY1);
+            bitCell2.handleMousePressed(mouseX1, mouseY1);
+            bitCell3.handleMousePressed(mouseX1, mouseY1);
+            formulaArea.handleMousePressed(mouseX1, mouseY1);
         }
         function mouseDragged() {
-            drawArea.onMouseDragged(mouseX, mouseY);
+            // Keep the integer
+            // so that pattern drawn with formula containing x*x, y*y, etc.
+            // doesn't change when just dragging the mouse
+            let mouseX1 = Math.floor(mouseX);
+            let mouseY1 = Math.floor(mouseY);
+            // use this if you use p5.js 2.x
+            // let mouseX1 = Math.floor(mouseX * dpr);
+            // let mouseY1 = Math.floor(mouseY * dpr);
+            drawArea.onMouseDragged(mouseX1, mouseY1);
         }
         function mouseReleased() {
-            drawArea.onMouseReleased(mouseX, mouseY);
+            // Keep the integer
+            // so that pattern drawn with formula containing x*x, y*y, etc.
+            // doesn't change when just dragging the mouse
+            let mouseX1 = Math.floor(mouseX);
+            let mouseY1 = Math.floor(mouseY);
+            // use this if you use p5.js 2.x
+            // let mouseX1 = Math.floor(mouseX * dpr);
+            // let mouseY1 = Math.floor(mouseY * dpr);
+            drawArea.onMouseReleased(mouseX1, mouseY1);
         }
         // XXX: If you write your p5.js code on your smartphone embedded in a html file
         // The program may response twice when you touch
