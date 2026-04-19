@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<!-- Bitwise Pattern Explorer Using p5.js
+    
+    Author: qp91mn64
+    License: MIT License
+    Created: 2026-04-19 
+    
+	Modified from explorer_1.html
+
+	Draw bitwise patterns with alpha.
+
+	Explore: drag inside the drawArea, or press arrow keys
+	Run/Pause: click "Running"/"Paused" button, or space key
+	Change each bit of parameters: click "0"/"1" buttons
+	Select different formulas: formula buttons
+	Save images: "Save" Button, or key `s`
+    Clear old patterns: "Clear" Button, or key `c`
+	
+	See details: zoom in with browser.
+	Pixels may look with different size with non-integer magnification.
+
+	NOTE: What are drawn may be different from those in Processing 4
+	by drawing transparent images repeatly,
+	as rgb pixels are quantized to a limited set of values
+	when setting alpha pixel to a very low value (e.g, 1) directly.
+	I have no idea whether or how to fix this.
+    -->
+<head>
+    <meta charset="UTF-8">
+    <title>Bitwise Pattern Explorer Using p5.js</title>
+    <!-- If you use p5.js 2.x, use the link as https://cdn.jsdelivr.net/npm/p5@2.0.0/lib/p5.min.js, with p5.js 1.x also available. -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+</head>
+<body>
+    <script>
+		let bitmask = 0;
+		let xOffset = 0;
+		let yOffset = 0;
+		let isRunning = true;  // run/pause
+		let formula_id = 5;
+		let formulas = ["x&y", "x|y", "x^y", "(x&y)*(x&y)", "(x|y)*(x|y)", "(x^y)*(x^y)",
+						"(x&y)*(x&y)*(x&y)", "(x|y)*(x|y)*(x|y)", "(x^y)*(x^y)*(x^y)", "(x*x)&(y*y)", "(x*x)|(y*y)", "(x*x)^(y*y)"
+		];
+		let formula2_id = 0;
+		let formulas2 = ["&", "|", "^"];
+		let img1;
+		let drawArea;
+		let bitCell1;
+		let bitCell2;
+		let bitCell3;
+		let formulaArea;
+		let pauseButton;
+		let saveButton;
+		let clearButton;
+		let dpr;  // devicePixelRatio
+		function setup() {
+			/*
+			This hack is from AI (MiniMax-M2.7)
+			for how to draw sharp details by pixels
+			and draw UI components the same size as sketches written in Processing 4
+			instead of changing DPI to 100% before running
+			for p5.js 2.x, the method of calculating mouseX and mouseY is different, multiplication by dpr is needed
+			
+			AI says that:
+			`createCanvas()` parameters in p5.js are interpreted as CSS pixel dimensions, NOT physical pixels.
+			The physical pixel count = CSS pixels × DPR.
+			To get 1:1 mapping, you must manually account for DPR.
+			
+			Note: A minor bug is introduced that, when dragging the mouse pixel by pixel (a little challenging actually),
+			some values of xOffset and yOffset are skipped if DPR > 1 (only tested 1.25)
+			The way to make up for this is using the UI or arrow keys instead,
+			as there are always errors with dragging the mouse.
+			I tried to fix this with AI,
+			but after quite an effort, I discovered that the bug is too complicated to be fixed (so gave up, ignored temporarily).
+			
+			A previous version of my bitwise-pattern-explorer is used for testing, and only tested on Windows 11
+			*/
+			dpr = window.devicePixelRatio || 1;  // for HiDPI displays
+			let cvs = createCanvas(Math.round(1000 * dpr), Math.round(700 * dpr));
+			cvs.style("width", "1000px");
+			cvs.style("height", "700px");
+			// nearest-neighbor interpolation, so no blurry details when zooming in
+			// the side effect is pixels rendered with different size when non-integer zooming in
+			cvs.style("image-rendering", "pixelated");
+			noSmooth();  // use this alone can make the graphics less blurry, but not sharp enough
+			//drawingContext.imageSmoothEnabled = false;
+			background(0);
+			img1 = createImage(512, 512);
+			frameRate(64);
+			drawArea = {
+				x0: 100,
+				y0: 100,
+				w: 512,
+				h: 512,
+				a1: -1,
+				isInDrawArea: false,
+				x1: 0,
+				y1: 0,
+				x2: 0,
+				y2: 0,
+			    backgroundColor: 204,
+				display: function() {
+					let x, y, whichPixel, result, r1;
+					img1.loadPixels();
+					for (let i = 0; i < img1.pixels.length; i += 4) {
+						// Bitwise operation is both a drawing method and an optimization tool
+						// Inspired from AI
+						// While AI suggested Math.floor() and mentioned bitwise operation (| 0)
+						// I come up with an idea to replace the division with bitwise operation
+						// As 512 equals 1 << 9
+						whichPixel = i >> 2;  // whichPixel = i / 4
+						x = whichPixel & 511;  // whichPixel % 512
+						y = whichPixel >>> 9;  // whichPixel / 512
+						// Note: don't use eval() here as it is too slow
+						if (formula_id == 0) {
+							r1 = (x + xOffset) & (y + yOffset);
+						} else if (formula_id == 1) {
+							r1 = ((x + xOffset) | (y + yOffset));
+						} else if (formula_id == 2) {
+							r1 = ((x + xOffset) ^ (y + yOffset));
+						} else if (formula_id == 3) {
+							r1 = ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset));
+						} else if (formula_id == 4) {
+							r1 = ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset));
+						} else if (formula_id == 5) {
+							r1 = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset));
+						} else if (formula_id == 6) {
+							r1 = ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset)) * ((x + xOffset) & (y + yOffset));
+						} else if (formula_id == 7) {
+							r1 = ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset)) * ((x + xOffset) | (y + yOffset));
+						} else if (formula_id == 8) {
+							r1 = ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset)) * ((x + xOffset) ^ (y + yOffset));
+						} else if (formula_id == 9) {
+							r1 = ((x + xOffset) * (x + xOffset) & (y + yOffset) * (y + yOffset));
+						} else if (formula_id == 10) {
+							r1 = ((x + xOffset) * (x + xOffset) | (y + yOffset) * (y + yOffset));
+						} else if (formula_id == 11) {
+							r1 = ((x + xOffset) * (x + xOffset) ^ (y + yOffset) * (y + yOffset));
+						}
+						if (formula2_id == 0) {
+							result = r1 & bitmask;
+						} else if (formula2_id == 1) {
+							result = r1 | bitmask;
+						} else if (formula2_id == 2) {
+							result = r1 ^ bitmask;
+						}
+						if (result >> 8 == 0) {  // grayscale, just like color() in Processing
+							img1.pixels[i] = result & 255;  // red
+							img1.pixels[i+1] = result & 255;  // green
+							img1.pixels[i+2] = result & 255;  // blue
+							img1.pixels[i+3] = 255;  // alpha
+						} else {
+							img1.pixels[i] = (result >> 16) & 255;  // red
+							img1.pixels[i+1] = (result >> 8) & 255;  // green
+							img1.pixels[i+2] = result & 255;  // blue
+							img1.pixels[i+3] = (result >> 24) & 255;  // alpha
+						}
+					}
+					img1.updatePixels();
+					image(img1, drawArea.x0, drawArea.y0);
+				},
+				clear: function() {
+					noStroke();
+					fill(this.backgroundColor);
+					rect(this.x0, this.y0, this.w, this.h);
+				},
+				onMousePressed: function(mouseX1, mouseY1){
+					if (mouseX1 >= this.x0 && mouseX1 < this.x0 + this.w && mouseY1 >= this.y0 && mouseY1 < this.y0 + this.h) {
+						this.isInDrawArea = true;
+						if (this.x1 == 0) {
+							this.x1 = mouseX1;
+							this.x2 = xOffset;
+						}
+						if (this.y1 == 0) {
+							this.y1 = mouseY1;
+							this.y2 = yOffset;
+						}
+					}
+				},
+				onMouseDragged: function(mouseX1, mouseY1) {
+					if (!this.isInDrawArea) {
+						return;
+					}
+					if (mouseX1 >= this.x0 && mouseX1 < this.x0 + this.w && mouseY1 >= this.y0 && mouseY1 < this.y0 + this.h) {
+						xOffset = this.x2 - (mouseX1 - this.x1);
+						yOffset = this.y2 - (mouseY1 - this.y1);
+					}
+				},
+				onMouseReleased: function(mouseX1, mouseY1) {
+					this.isInDrawArea = false;
+					this.x1 = 0;
+					this.y1 = 0;
+				},
+				onKeyPressed: function(key1) {
+					if (this.a1 == -1) {
+						this.a1 = millis();
+						if (keyIsDown(RIGHT_ARROW)) {
+							xOffset++;
+						}
+						if (keyIsDown(LEFT_ARROW)) {
+							xOffset--;
+						}
+						if (keyIsDown(UP_ARROW)) {
+							yOffset--;
+						}
+						if (keyIsDown(DOWN_ARROW)) {
+							yOffset++;
+						}
+					}
+				},
+				// Inspired from DeepSeek, use onKeyHeld
+				// to manage how the area responses to keys keeping pressed
+				// instead of leaving relevant code in the draw().
+				onKeyHeld: function() {
+					if (keyIsPressed) {
+						// Delay 400ms in case you just want to move one pixel
+						if (this.a1 >= 0 && millis() - this.a1 > 400) {
+							if (keyIsDown(RIGHT_ARROW)) {
+								xOffset++;
+							}
+							if (keyIsDown(LEFT_ARROW)) {
+								xOffset--;
+							}
+							if (keyIsDown(UP_ARROW)) {
+								yOffset--;
+							}
+							if (keyIsDown(DOWN_ARROW)) {
+								yOffset++;
+							}
+						}
+					} else {
+						this.a1 = -1;
+					}
+				}
+			};
+			bitCell1 = {
+				bitCellX0: drawArea.x0 + drawArea.w + 70,
+				bitCellY0: drawArea.y0 + 16,  // XXX: Don't use this.rowSpace, otherwise the result will be NaN
+				bitCellWidth: 32,
+				bitCellHeight: 32,
+				rowSpace: 32,
+				// XXX: If the text box is as large as the size of text then no text is drawn on computer
+				// But text does appear on smartphone
+				// According to what AI says and my tests
+				// Smaller textsize can avoid the problem of no text on computer
+				// Or use text() with 3 parameters instead
+				// It seems that the size of text works differently between Processing and p5.js
+				// Even differ from platforms (computer/smartphone)
+				numberSize: 28,
+				display: function() {
+					push();
+					translate(this.bitCellX0, this.bitCellY0);
+					for (let i = 0; i < 32; i++) {
+						let x = 7 - i % 8;
+						let y = 3 - Math.floor(i / 8);  // AI recommends Math.floor() instead of parseInt
+						let fillColor = 1 << i;
+						let bit = (bitmask >> i) & 1;
+						// In p5.js color behaves differently from Processing; integers cannot directly used as RGBA color.
+						if (fillColor >> 24 == 0) {
+							fill((fillColor  >> 16) & 255, (fillColor >> 8) & 255, fillColor & 255);  // bitwise RGB color
+						} else {
+							fill(0, 0, 0, (fillColor >> 24) & 255);
+						}
+						rect(x * this.bitCellWidth, y * (this.bitCellHeight + this.rowSpace), this.bitCellWidth, this.bitCellHeight);
+						textSize(this.numberSize);
+						textAlign(LEFT, TOP);
+						fill(255);
+						text(`${bit}`, x * this.bitCellWidth + 8, y * (this.bitCellHeight + this.rowSpace) + 3);
+					}
+					pop();
+				},
+				// I asks some AI models, they say it is not recommended to use the name mousePressed here
+				// and recommend other relevent names such as handleMousePressed, onMousePressed, ...
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let whichBit;
+					let clickX = mouseX1 - this.bitCellX0;
+					let clickY = mouseY1 - this.bitCellY0;
+					let r1 = Math.floor(clickY / (this.bitCellHeight + this.rowSpace));
+					let c1 = Math.floor(clickX / this.bitCellWidth);
+					if (clickX >= 0 && clickY >= 0 && clickY % (this.bitCellHeight + this.rowSpace) < this.bitCellHeight && c1 >= 0 && c1 < 8 && r1 >= 0 && r1 < 4) {
+						whichBit = (3 - r1) * 8 + 7 - c1;
+						bitmask = bitmask ^ (1 << whichBit);
+					}
+				}
+			};
+			bitCell2 = {
+				bitCellX0: drawArea.x0 - 25,
+				bitCellY0: drawArea.y0 - 51,
+				bitCellWidth: 16,
+				bitCellHeight: 16,
+				numberSize: 14,
+				cellColor: [0, 255],
+				textColor: [255, 0],
+				display: function() {
+					textSize(this.numberSize);
+					textAlign(LEFT, TOP);
+					// XXX: No binary() in p5.js
+					for (let i = 0; i < 32; i++) {
+						let bit = (xOffset >> (31 - i)) & 1;  // 0 or 1
+						fill(this.cellColor[bit]);
+						rect(this.bitCellX0 + i * this.bitCellWidth,  this.bitCellY0, this.bitCellWidth, this.bitCellHeight);
+						fill(this.textColor[bit]);
+						text(`${bit}`,  this.bitCellX0 + i * this.bitCellWidth + 4,  this.bitCellY0 + 2);
+					}
+				},
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let clickX = mouseX1 - this.bitCellX0;
+					let clickY = mouseY1 - this.bitCellY0;
+					let whichBit =  31 - Math.floor(clickX / this.bitCellWidth);
+					if (clickX >= 0 && clickY >= 0 && clickY < this.bitCellHeight && whichBit >= 0 && whichBit < 32) {
+						xOffset = xOffset ^ (1 << whichBit);
+					}
+				}
+			};
+			bitCell3 = {
+				bitCellX0: drawArea.x0 - (51 - 16),  // XXX: Don't use this.bitCellHeight, otherwise the result will be NaN
+				bitCellY0: drawArea.y0 - 25,
+				bitCellWidth: 16,
+				bitCellHeight: 16,
+				numberSize: 14,
+				cellColor: [0, 255],
+				textColor: [255, 0],
+				display: function() {
+					push();
+					translate(this.bitCellX0, this.bitCellY0);
+					rotate(PI / 2);
+					textSize(this.numberSize);
+					textAlign(LEFT, TOP);
+					for (let i = 0; i < 32; i++) {
+						let bit = (yOffset >> (31 - i)) & 1;
+						fill(this.cellColor[bit]);
+						rect(i * this.bitCellWidth, 0, this.bitCellWidth, this.bitCellHeight);
+						fill(this.textColor[bit]);
+						text(`${bit}`, i * this.bitCellWidth + 4, 2);
+					}
+					pop();
+				},
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let clickX =  mouseX1 - (this.bitCellX0 - this.bitCellHeight);
+					let clickY = mouseY1 - this.bitCellY0;
+					let whichBit = 31 - Math.floor(clickY / this.bitCellWidth);
+					if (clickX >= 0 && clickX < this.bitCellHeight && clickY >= 0 && whichBit >= 0 && whichBit < 32) {
+						yOffset = yOffset ^ (1 << whichBit);
+					}
+				}
+			};
+			formulaArea = {
+				x0: bitCell1.bitCellX0,
+				y0: drawArea.y0 + 4 * (bitCell1.bitCellHeight + bitCell1.rowSpace) + bitCell1.rowSpace / 2 + 30,
+				w1: 144,
+				h1: 32,
+				areaTextSize: 20,
+				w2: 32,
+				w3: 80,
+				display: function() {
+					stroke(200);
+					fill(0);
+					rect(this.x0, this.y0, this.w1, this.h1);
+					rect(this.x0 + this.w1, this.y0, this.w2, this.h1);
+					noStroke();
+					rect(this.x0 + this.w1 + this.w2, this.y0, this.w3, this.h1);
+					fill(255);
+					textSize(this.areaTextSize);
+					textAlign(LEFT, BOTTOM);
+					text(formulas[formula_id], this.x0 + 4, this.y0 + 28);
+					text(formulas2[formula2_id], this.x0 + this.w1 + (this.w2 - textWidth(formulas2[formula2_id])) / 2, this.y0 + 28);
+					text("bitmask", this.x0 + this.w1 + this.w2 + (this.w2 - this.areaTextSize) / 2, this.y0 + 28);
+				},
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let clickX = mouseX1 - this.x0;
+					let clickY = mouseY1 - this.y0;
+					if (clickX >= 0 && clickX < this.w1 && clickY >= 0 && clickY < this.h1) {
+						formula_id++;
+						if (formula_id >= formulas.length) {formula_id -= formulas.length;}
+					} else if (clickX >= this.w1 && clickX < this.w1 + this.w2 && clickY >= 0 && clickY < this.h1) {
+						formula2_id++;
+						if (formula2_id >= formulas2.length) {formula2_id -= formulas2.length;}
+					}
+				}
+			};
+			pauseButton = {
+			x0: bitCell1.bitCellX0,
+				y0: formulaArea.y0 + formulaArea.h1 + 30,
+				areaWidth: 96,
+				areaHeight: 32,
+				areaTextSize: 20,
+				display: function() {
+					stroke(200);
+					fill(0);
+					rect(this.x0, this.y0, this.areaWidth, this.areaHeight);
+					noStroke();
+					fill(255);
+					textSize(this.areaTextSize);
+					textAlign(LEFT, BOTTOM);
+					if (isRunning) {
+						text("Running", this.x0 + 4, this.y0 + 28);
+					} else {
+						text("Paused", this.x0 + 4, this.y0 + 28);
+					}
+				},
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let clickX = mouseX1 - this.x0;
+					let clickY = mouseY1 - this.y0;
+					if (clickX >= 0 && clickX < this.areaWidth && clickY >= 0 && clickY < this.areaHeight) {
+						noStroke();
+					isRunning = !isRunning;  
+				    }
+			    },
+				handleKeyPressed: function(key1) {
+					if (key1 == " ") {
+						isRunning = !isRunning;
+					}
+				}
+		    };
+			saveButton = {
+				x0: pauseButton.x0 + pauseButton.areaWidth + 16,
+					y0: pauseButton.y0,
+					areaWidth: 64,
+					areaHeight: 32,
+					areaTextSize: 20,
+				stamp: function() {
+					let s;
+					s = year() + nf(month(), 2) + nf(day(), 2) + nf(hour(), 2) + nf(minute(), 2) + nf(second(), 2);
+					s += `_${millis()}_${frameCount}_${Math.floor(random(10000))}`;
+					return s;
+				},
+				mySave: function() {
+					let d = pixelDensity(); // XXX: default pixelDensity may be > 1
+					let imageName = "s" + this.stamp() + ".png";
+					let img2 = createImage(img1.width, img1.height);
+					loadPixels();
+					img2.loadPixels();
+					for (let i = 0; i < img1.pixels.length; i+=4) {
+						let whichPixel = i >> 2;
+						x = whichPixel & 511;  // whichPixel % 512
+						y = whichPixel >>> 9;  // whichPixel / 512
+						// XXX: when dpr = 1.25, width is 1250 while pixels.length is 1000 * 700 * 2 * 2 * 4 = 11200000
+						// so to extract pixels 1000 * d is correct
+						let w = Math.floor(width/dpr) * d;
+							let whichPixel1 = ((drawArea.y0 * d + y * d) * w + drawArea.x0 * d + x * d) * 4;
+							img2.pixels[i] = pixels[whichPixel1];  // red
+							img2.pixels[i+1] = pixels[whichPixel1+1];  // green
+							img2.pixels[i+2] = pixels[whichPixel1+2];  // blue
+							img2.pixels[i+3] = pixels[whichPixel1+3];  // alpha
+					}
+					img2.updatePixels();
+					save(img2, imageName);
+				},
+				display: function() {
+					stroke(200);
+					fill(0);
+					rect(this.x0, this.y0, this.areaWidth, this.areaHeight);
+					noStroke();
+					fill(255);
+					textSize(this.areaTextSize);
+					textAlign(LEFT, BOTTOM);
+					text("Save", this.x0 + 4, this.y0 + 28);
+				},
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let clickX = mouseX1 - this.x0;
+					let clickY = mouseY1 - this.y0;
+					if (clickX >= 0 && clickX < this.areaWidth && clickY >= 0 && clickY < this.areaHeight) {
+					    this.mySave();
+				    }
+				},
+				handleKeyPressed: function(key1) {
+					if (key1 == "s" || key1 == "S") {
+						this.mySave();
+					}
+				}
+			};
+			clearButton = {
+			x0: saveButton.x0 + saveButton.areaWidth + 16,
+				y0: saveButton.y0,
+				areaWidth: 64,
+				areaHeight: 32,
+				areaTextSize: 20,
+				display: function() {
+					stroke(200);
+					fill(0);
+					rect(this.x0, this.y0, this.areaWidth, this.areaHeight);
+					noStroke();
+					fill(255);
+					textSize(this.areaTextSize);
+					textAlign(LEFT, BOTTOM);
+					text("Clear", this.x0 + 4, this.y0 + 28);
+				},
+				handleMousePressed: function(mouseX1, mouseY1) {
+					let clickX = mouseX1 - this.x0;
+					let clickY = mouseY1 - this.y0;
+					if (clickX >= 0 && clickX < this.areaWidth && clickY >= 0 && clickY < this.areaHeight) {
+						drawArea.clear();
+					}
+				},
+				handleKeyPressed: function(key1) {
+					if (key1 == "c" || key1 == "C") {
+                        drawArea.clear();
+					}
+				}
+			};
+			noStroke();
+			fill(204);
+			rect(drawArea.x0, drawArea.y0, drawArea.w, drawArea.h);
+		}
+		function draw() {
+			if (isRunning) {
+				bitmask--;
+			}
+			// Use keyIsPressed instead of keyPressed()
+			// To make sure the drawings keep moving until you release the arrow key
+			drawArea.onKeyHeld();
+		    drawArea.display();
+			bitCell1.display();
+			bitCell2.display();
+			bitCell3.display();
+			drawLine1();
+			formulaArea.display();
+			pauseButton.display();
+			saveButton.display();
+		    clearButton.display();
+		    
+			}
+		function keyPressed() {
+			let key1 = key;
+			drawArea.onKeyPressed(key1);
+			pauseButton.handleKeyPressed(key1);
+			saveButton.handleKeyPressed(key1);
+			clearButton.handleKeyPressed(key1);
+		}
+		function mousePressed() {
+			// Keep the integer
+			// so that pattern drawn with formula containing x*x, y*y, etc.
+			// doesn't change when just dragging the mouse
+			let mouseX1 = Math.floor(mouseX);
+			let mouseY1 = Math.floor(mouseY);
+			// use this if you use p5.js 2.x
+			// let mouseX1 = Math.floor(mouseX * dpr);
+			// let mouseY1 = Math.floor(mouseY * dpr);
+			drawArea.onMousePressed(mouseX1, mouseY1);
+			bitCell1.handleMousePressed(mouseX1, mouseY1);
+			bitCell2.handleMousePressed(mouseX1, mouseY1);
+			bitCell3.handleMousePressed(mouseX1, mouseY1);
+			formulaArea.handleMousePressed(mouseX1, mouseY1);
+			pauseButton.handleMousePressed(mouseX1, mouseY1);
+			saveButton.handleMousePressed(mouseX1, mouseY1);
+		    clearButton.handleMousePressed(mouseX1, mouseY1);
+		}
+		function mouseDragged() {
+			// Keep the integer
+			// so that pattern drawn with formula containing x*x, y*y, etc.
+			// doesn't change when just dragging the mouse
+			let mouseX1 = Math.floor(mouseX);
+			let mouseY1 = Math.floor(mouseY);
+			// use this if you use p5.js 2.x
+			// let mouseX1 = Math.floor(mouseX * dpr);
+			// let mouseY1 = Math.floor(mouseY * dpr);
+			drawArea.onMouseDragged(mouseX1, mouseY1);
+		}
+		function mouseReleased() {
+			// Keep the integer
+			// so that pattern drawn with formula containing x*x, y*y, etc.
+			// doesn't change when just dragging the mouse
+			let mouseX1 = Math.floor(mouseX);
+			let mouseY1 = Math.floor(mouseY);
+			// use this if you use p5.js 2.x
+			// let mouseX1 = Math.floor(mouseX * dpr);
+			// let mouseY1 = Math.floor(mouseY * dpr);
+			drawArea.onMouseReleased(mouseX1, mouseY1);
+		}
+		// XXX: If you write your p5.js code on your smartphone embedded in a html file
+		// The program may response twice when you touch
+		// According to what AI says, use touchStarted() and let it return false to solve the problem
+		// But if false is returned then the canvas get stuck on smartphone.
+		function touchStarted() {
+			return;
+		}
+		function drawLine1() {
+			stroke(191);
+			line(drawArea.x0, drawArea.y0 - 2, drawArea.x0, bitCell2.bitCellY0 + bitCell2.bitCellHeight + 4);
+			line(bitCell3.bitCellX0 + 4, drawArea.y0, drawArea.x0 - 2, drawArea.y0);
+			noStroke();
+		}
+    </script>
+</body>
