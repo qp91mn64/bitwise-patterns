@@ -212,6 +212,8 @@
 				// to manage how the area responses to keys keeping pressed
 				// instead of leaving relevant code in the draw().
 				onKeyHeld: function() {
+					// Use keyIsPressed instead of keyPressed()
+			        // To make sure the drawings keep moving until you release the arrow key
 					if (keyIsPressed) {
 						// Delay 400ms in case you just want to move one pixel
 						if (this.a1 >= 0 && millis() - this.a1 > 400) {
@@ -269,7 +271,7 @@
 					}
 					pop();
 				},
-				// I asks some AI models, they say it is not recommended to use the name mousePressed here
+				// I ask some AI models, they say it is not recommended to use the name mousePressed here
 				// and recommend other relevent names such as handleMousePressed, onMousePressed, ...
 				handleMousePressed: function(mouseX1, mouseY1) {
 					let whichBit;
@@ -506,8 +508,6 @@
 			if (isRunning) {
 				bitmask--;
 			}
-			// Use keyIsPressed instead of keyPressed()
-			// To make sure the drawings keep moving until you release the arrow key
 			drawArea.onKeyHeld();
 		    drawArea.display();
 			bitCell1.display();
